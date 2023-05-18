@@ -1,0 +1,5 @@
+Hi 
+We had a difficulty connecting to wM in the QV area yesterday, which is why the records are in the Pending status, but we rectified it and it is now operating as planned.
+However, we are unsure about the CIX level upgrade because we are receiving successful responses from wM. We must inquire with wM as to why it is not replicating. 
+FYI
+Yesterday, the QV2 Ui pointed to the v9 schema. However, it is now linking to the v2 schema.
