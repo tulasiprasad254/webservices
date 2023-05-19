@@ -1,1 +1,1 @@
-Checked all NRE Services that were previously failing with an access forbidden error. Everything is now operational.  
+I'd like to bring your attention to the fact that for S02, our base table is updating with success and a response from wM, but the Event log table is still showing the error data as record not found, retry count as 1, and event status as 2.
