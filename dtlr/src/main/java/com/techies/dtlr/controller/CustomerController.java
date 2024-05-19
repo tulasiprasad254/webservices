@@ -35,8 +35,6 @@ public class CustomerController {
 	
 	private static final Logger logger = LoggerFactory.getLogger(CustomerController.class);
 	
-	
-	
 	private final  MobileProcessRequest mobileProcessRequest;
 	
 	
