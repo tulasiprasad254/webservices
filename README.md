@@ -223,3 +223,89 @@ BEGIN
             ORA_RAISEERROR(SEC_CODE, 'Execution FAILED', $$PLSQL_LINE);
     END;
 END;
+------------------------------------------------------------------------------
+FEB ISSUE
+To implement the described requirements, we will design a solution that:
+
+Backs up records from the CZ_LN_BILLING_STMT_TXN table into two backup tables: CZ_LN_BILLING_STMT_TXN_H and CZ_LN_BILLING_STMT_TXN_H_N.
+Ensures that the CZ_LN_BILLING_STMT_TXN_H_N table contains only one month's records using the DATE_RUN column.
+Compares the CZ_LN_BILLING_STMT_TXN table with CZ_LN_BILLING_STMT_TXN_H_N using the transaction reference column (TRANSACTION_REF) to prevent duplicates.
+Removes duplicates from the CZ_LN_BILLING_STMT_TXN table if records exist in both tables.
+Step-by-Step Process:
+1. Back Up Records
+This procedure will back up records from the CZ_LN_BILLING_STMT_TXN table to the two backup tables (CZ_LN_BILLING_STMT_TXN_H and CZ_LN_BILLING_STMT_TXN_H_N).
+
+SQL Code:
+sql
+Copy code
+CREATE OR REPLACE PROCEDURE CZ_AP_BATCH_EXT_LOAN_BILLING AS
+BEGIN
+    -- Backup records to CZ_LN_BILLING_STMT_TXN_H
+    INSERT INTO CZ_LN_BILLING_STMT_TXN_H (TRANSACTION_REF, DATE_RUN, ...)
+    SELECT TRANSACTION_REF, DATE_RUN, ...
+    FROM CZ_LN_BILLING_STMT_TXN;
+
+    -- Backup records to CZ_LN_BILLING_STMT_TXN_H_N
+    INSERT INTO CZ_LN_BILLING_STMT_TXN_H_N (TRANSACTION_REF, DATE_RUN, ...)
+    SELECT TRANSACTION_REF, DATE_RUN, ...
+    FROM CZ_LN_BILLING_STMT_TXN;
+
+    COMMIT;
+END;
+/
+This will insert all records from the CZ_LN_BILLING_STMT_TXN table into both backup tables (CZ_LN_BILLING_STMT_TXN_H and CZ_LN_BILLING_STMT_TXN_H_N).
+
+2. Clean Old Records in CZ_LN_BILLING_STMT_TXN_H_N
+Next, we ensure that CZ_LN_BILLING_STMT_TXN_H_N only contains records for the current month by removing older records based on the DATE_RUN column.
+
+SQL Code:
+sql
+Copy code
+CREATE OR REPLACE PROCEDURE CLEAN_OLD_RECORDS_H_N AS
+BEGIN
+    -- Delete records older than one month in CZ_LN_BILLING_STMT_TXN_H_N
+    DELETE FROM CZ_LN_BILLING_STMT_TXN_H_N
+    WHERE DATE_RUN < TRUNC(ADD_MONTHS(SYSDATE, -1), 'MM'); -- Only keep current month's records
+
+    COMMIT;
+END;
+/
+This procedure will keep only the records for the current month and remove older records.
+
+3. Compare and Remove Duplicates
+Finally, we compare the records between the two tables (CZ_LN_BILLING_STMT_TXN and CZ_LN_BILLING_STMT_TXN_H_N) based on the transaction reference and DATE_RUN to remove duplicates from CZ_LN_BILLING_STMT_TXN.
+
+SQL Code:
+sql
+Copy code
+CREATE OR REPLACE PROCEDURE CHECK_DUPLICATES AS
+BEGIN
+    -- Remove duplicate records from CZ_LN_BILLING_STMT_TXN where the same transaction exists in CZ_LN_BILLING_STMT_TXN_H_N
+    DELETE FROM CZ_LN_BILLING_STMT_TXN
+    WHERE EXISTS (
+        SELECT 1
+        FROM CZ_LN_BILLING_STMT_TXN_H_N h
+        WHERE h.TRANSACTION_REF = CZ_LN_BILLING_STMT_TXN.TRANSACTION_REF
+        AND h.DATE_RUN = CZ_LN_BILLING_STMT_TXN.DATE_RUN
+    );
+
+    COMMIT;
+END;
+/
+This procedure removes duplicates from CZ_LN_BILLING_STMT_TXN by comparing it with CZ_LN_BILLING_STMT_TXN_H_N.
+
+Workflow:
+Backup records: Run the CZ_AP_BATCH_EXT_LOAN_BILLING procedure to back up the records from CZ_LN_BILLING_STMT_TXN to the two backup tables.
+Clean old records: Run the CLEAN_OLD_RECORDS_H_N procedure to ensure that CZ_LN_BILLING_STMT_TXN_H_N only has records for the current month.
+Check and remove duplicates: Run the CHECK_DUPLICATES procedure to remove duplicate records from the CZ_LN_BILLING_STMT_TXN table by comparing it with CZ_LN_BILLING_STMT_TXN_H_N.
+Summary:
+Backup Process: Records from CZ_LN_BILLING_STMT_TXN are backed up into CZ_LN_BILLING_STMT_TXN_H and CZ_LN_BILLING_STMT_TXN_H_N.
+Clean Up: Older records are removed from CZ_LN_BILLING_STMT_TXN_H_N, keeping only the current month’s records.
+Duplicate Check: Records in CZ_LN_BILLING_STMT_TXN are compared with the backup table CZ_LN_BILLING_STMT_TXN_H_N, and duplicates are removed.
+This ensures a clean, deduplicated set of records for billing statements.
+
+
+
+
+
+
