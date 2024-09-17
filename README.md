@@ -358,6 +358,68 @@ EXCEPTION
 END CZ_AD_BILL_SAME_DAY;
 /
 
+------------------------------------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE CZ_DELETE_MATCHING_TXN
+AS
+    -- Declare a cursor to fetch the ACCOUNT_IDs from the target table
+    CURSOR c_target_data IS
+        SELECT ACCOUNT_ID 
+        FROM TARGET_TABLE_NAME;
+
+    -- Variables to hold fetched values
+    v_account_id TARGET_TABLE_NAME.ACCOUNT_ID%TYPE;
+    v_txn_ref_no CZ_LN_BILLING_STMT_TXN.TXN_REF_NO%TYPE;
+    v_txn_ref_no_h CZ_LN_BILLING_STMT_TXN_H.TXN_REF_NO%TYPE;
+    
+BEGIN
+    -- Open the cursor
+    OPEN c_target_data;
+    
+    -- Fetch each ACCOUNT_ID from the target table
+    LOOP
+        FETCH c_target_data INTO v_account_id;
+        
+        -- Exit the loop when no more rows are found
+        EXIT WHEN c_target_data%NOTFOUND;
+
+        -- For each ACCOUNT_ID, find matching transactions in CZ_LN_BILLING_STMT_TXN
+        FOR txn_record IN (SELECT TXN_REF_NO 
+                             FROM CZ_LN_BILLING_STMT_TXN 
+                            WHERE ACCOUNT_ID = v_account_id)
+        LOOP
+            -- Store the TXN_REF_NO for comparison
+            v_txn_ref_no := txn_record.TXN_REF_NO;
+
+            -- Check if the TXN_REF_NO exists in CZ_LN_BILLING_STMT_TXN_H
+            SELECT TXN_REF_NO
+              INTO v_txn_ref_no_h
+              FROM CZ_LN_BILLING_STMT_TXN_H
+             WHERE TXN_REF_NO = v_txn_ref_no;
+
+            -- If a match is found, delete the record from CZ_LN_BILLING_STMT_TXN
+            DELETE FROM CZ_LN_BILLING_STMT_TXN
+             WHERE TXN_REF_NO = v_txn_ref_no;
+
+        END LOOP;
+    END LOOP;
+
+    -- Close the cursor
+    CLOSE c_target_data;
+
+    -- Commit the transaction after processing all records
+    COMMIT;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- If no matching transaction is found in CZ_LN_BILLING_STMT_TXN_H, continue processing
+        NULL;
+    WHEN OTHERS THEN
+        -- Handle any other errors and rollback
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20002, 'An error occurred while processing transactions: ' || SQLERRM);
+END CZ_DELETE_MATCHING_TXN;
+/
 
 
 
