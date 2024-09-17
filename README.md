@@ -312,27 +312,40 @@ CREATE OR REPLACE PROCEDURE CZ_AD_BILL_SAME_DAY (
     PI_NEXT_PROCESS_DATE DATE
 )
 AS
-    -- Declare variables to hold the data from the cursor
-    v_account_id FLX_LN_ACCT_PAYMENT_INSTR_B.ACCOUNT_ID%TYPE;
-    v_actual_execution_date FLX_LN_ACCT_PAYMENT_INSTR_B.ACTUAL_EXECUTION_DATE%TYPE;
+    -- Declare the cursor to fetch the required data
+    CURSOR c_bill_data IS
+        SELECT A.ACCOUNT_ID,
+               A.ACTUAL_EXECUTION_DATE,
+               C.NEXT_BILL_GENERATION_DATE
+          FROM FLX_LN_ACCT_PAYMENT_INSTR_B A,
+               FLX_LN_ACCOUNTS_B B,
+               FLX_LN_ACCT_STATE C
+         WHERE A.ACCOUNT_ID = B.ACCOUNT_ID
+           AND A.ACCOUNT_ID = C.ACCOUNT_ID
+           AND A.ACTUAL_EXECUTION_DATE = C.NEXT_BILL_GENERATION_DATE;
+
+    -- Variables to hold the fetched cursor values
+    v_account_id               FLX_LN_ACCT_PAYMENT_INSTR_B.ACCOUNT_ID%TYPE;
+    v_actual_execution_date    FLX_LN_ACCT_PAYMENT_INSTR_B.ACTUAL_EXECUTION_DATE%TYPE;
     v_next_bill_generation_date FLX_LN_ACCT_STATE.NEXT_BILL_GENERATION_DATE%TYPE;
 BEGIN
-    -- Cursor to fetch the required data
-    FOR record IN (SELECT A.ACCOUNT_ID,
-                          A.ACTUAL_EXECUTION_DATE,
-                          C.NEXT_BILL_GENERATION_DATE
-                     FROM FLX_LN_ACCT_PAYMENT_INSTR_B A,
-                          FLX_LN_ACCOUNTS_B B,
-                          FLX_LN_ACCT_STATE C
-                    WHERE A.ACCOUNT_ID = B.ACCOUNT_ID
-                      AND A.ACCOUNT_ID = C.ACCOUNT_ID
-                      AND A.ACTUAL_EXECUTION_DATE = C.NEXT_BILL_GENERATION_DATE)
+    -- Open the cursor
+    OPEN c_bill_data;
+    
+    -- Fetch records one by one
     LOOP
-        -- Insert fetched data into the target table
+        FETCH c_bill_data INTO v_account_id, v_actual_execution_date, v_next_bill_generation_date;
+        
+        -- Exit the loop when no more rows are found
+        EXIT WHEN c_bill_data%NOTFOUND;
+        
+        -- Insert the fetched data into the target table
         INSERT INTO TARGET_TABLE_NAME (ACCOUNT_ID, ACTUAL_EXECUTION_DATE, NEXT_BILL_GENERATION_DATE, BENACH_CODE, PROCESS_DATE, NEXT_PROCESS_DATE)
-        VALUES (record.ACCOUNT_ID, record.ACTUAL_EXECUTION_DATE, record.NEXT_BILL_GENERATION_DATE, PI_BENACH_CODE, PI_PROCESS_DATE, PI_NEXT_PROCESS_DATE);
-
+        VALUES (v_account_id, v_actual_execution_date, v_next_bill_generation_date, PI_BENACH_CODE, PI_PROCESS_DATE, PI_NEXT_PROCESS_DATE);
     END LOOP;
+    
+    -- Close the cursor
+    CLOSE c_bill_data;
 
     -- Commit the transaction
     COMMIT;
@@ -344,6 +357,7 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20001, 'An error occurred while processing the data: ' || SQLERRM);
 END CZ_AD_BILL_SAME_DAY;
 /
+
 
 
 
