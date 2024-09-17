@@ -305,7 +305,45 @@ Duplicate Check: Records in CZ_LN_BILLING_STMT_TXN are compared with the backup 
 This ensures a clean, deduplicated set of records for billing statements.
 
 
+------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE CZ_AD_BILL_SAME_DAY (
+    PI_BENACH_CODE      VARCHAR2,
+    PI_PROCESS_DATE     DATE,
+    PI_NEXT_PROCESS_DATE DATE
+)
+AS
+    -- Declare variables to hold the data from the cursor
+    v_account_id FLX_LN_ACCT_PAYMENT_INSTR_B.ACCOUNT_ID%TYPE;
+    v_actual_execution_date FLX_LN_ACCT_PAYMENT_INSTR_B.ACTUAL_EXECUTION_DATE%TYPE;
+    v_next_bill_generation_date FLX_LN_ACCT_STATE.NEXT_BILL_GENERATION_DATE%TYPE;
+BEGIN
+    -- Cursor to fetch the required data
+    FOR record IN (SELECT A.ACCOUNT_ID,
+                          A.ACTUAL_EXECUTION_DATE,
+                          C.NEXT_BILL_GENERATION_DATE
+                     FROM FLX_LN_ACCT_PAYMENT_INSTR_B A,
+                          FLX_LN_ACCOUNTS_B B,
+                          FLX_LN_ACCT_STATE C
+                    WHERE A.ACCOUNT_ID = B.ACCOUNT_ID
+                      AND A.ACCOUNT_ID = C.ACCOUNT_ID
+                      AND A.ACTUAL_EXECUTION_DATE = C.NEXT_BILL_GENERATION_DATE)
+    LOOP
+        -- Insert fetched data into the target table
+        INSERT INTO TARGET_TABLE_NAME (ACCOUNT_ID, ACTUAL_EXECUTION_DATE, NEXT_BILL_GENERATION_DATE, BENACH_CODE, PROCESS_DATE, NEXT_PROCESS_DATE)
+        VALUES (record.ACCOUNT_ID, record.ACTUAL_EXECUTION_DATE, record.NEXT_BILL_GENERATION_DATE, PI_BENACH_CODE, PI_PROCESS_DATE, PI_NEXT_PROCESS_DATE);
 
+    END LOOP;
+
+    -- Commit the transaction
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Handle exceptions and rollback if needed
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20001, 'An error occurred while processing the data: ' || SQLERRM);
+END CZ_AD_BILL_SAME_DAY;
+/
 
 
 
