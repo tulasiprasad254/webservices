@@ -420,6 +420,19 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20002, 'An error occurred while processing transactions: ' || SQLERRM);
 END CZ_DELETE_MATCHING_TXN;
 /
+-------------------------------------------------
+	Customize Oracle Banking Platform as per the Client’s Business requirements identified.
+	Configure Products, General Ledgers, Tiered Pricing, Fees, Rewards, Asset Classifications, Banking parameters by seeding the requirements in Core banking System (OBP).
+	Custom design specific programs for enterprise and user needs, to support business processes, provide specific technical awareness, insight, and documentation as appropriate to departments and users.
+	Craft step-by-step algorithms to business problems using different approaches like Asymptotic analysis (O Notation, Omega Notation, Theta Notation) or dynamic programming approach.
+	Perform algorithm analysis such as Priori analysis and Posterior analysis
+	Review / Present algorithms with Enterprise Architecture Council and identify the desired approach.
+	Define SOA rules as per the finalized solution to integrate with different integrations like Equifax / TransUnion.
+	Create stored procedures as per the defined algorithms to execute the batch jobs.
+	Work with Product owners, Business stockholders, Project managers and develop high usable and intuitive webservice interfaces designs / flows using BPMN languages and assist in SOAP/REST webservice development.
+	Work with solution design engineers, architects, vendor team and other cross functional IT professionals to design tools and enhancements to fulfill enterprise objectives and needs.
+	Design and Develop solutions / models as applicable, using scientific analysis and mathematical techniques to predict and measure outcome and consequences of design.
+	Prepare High-Level and Low-Level design document artifacts including Product WSDLs documentation to integrate with other streams.
 
 
 
